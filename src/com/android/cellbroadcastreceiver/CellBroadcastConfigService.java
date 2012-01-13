@@ -299,6 +299,14 @@ public class CellBroadcastConfigService extends IntentService {
                     if (DBG) Log.d(TAG, "disabling cell broadcast CMAS test messages");
                     manager.disableCellBroadcastRange(cmasTestStart, cmasTestEnd);
                 }
+
+                if ("true".equals(SystemProperties.get("persist.conformance"))) {
+                    // add Channels 0 and 1 for the 3GPP conformance 34.3 Test Case
+                    manager.enableCellBroadcastRange(0, 1);
+                    // add Channel 0x03E7=999 support CBDD,
+                    // to pass 3GPP 51010-4 the section 27.22.5.2.1 Seq 1.3.
+                    manager.enableCellBroadcast(999);
+                }
             } catch (Exception ex) {
                 Log.e(TAG, "exception enabling cell broadcast channels", ex);
             }
