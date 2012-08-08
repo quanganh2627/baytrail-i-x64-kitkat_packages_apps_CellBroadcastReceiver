@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
 /*
+ * Copyright (C) 2015 Intel Mobile Communications GmbH
  * Copyright (C) 2011 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,8 +61,9 @@
 <!-- Uncomment this category to show the Cell Broadcasts launcher icon.
      Otherwise, set "config_cellBroadcastAppLinks" to true in a config.xml overlay
      to add links to Cell Broadcast activities via Settings and MMS menu items.
+-->
                 <category android:name="android.intent.category.LAUNCHER" />
- -->
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>
