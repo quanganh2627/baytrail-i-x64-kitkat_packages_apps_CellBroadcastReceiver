@@ -107,11 +107,11 @@
 
         <receiver android:name="CellBroadcastReceiver">
             <intent-filter>
-                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                 <action android:name="android.intent.action.AIRPLANE_MODE" />
             </intent-filter>
 
             <intent-filter>
-                 <action android:name="android.intent.action.AIRPLANE_MODE" />
+                 <action android:name="android.intent.action.SIM_STATE_CHANGED" />
             </intent-filter>
         </receiver>
 
