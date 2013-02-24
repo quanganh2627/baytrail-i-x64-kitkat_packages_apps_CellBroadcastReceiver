@@ -17,7 +17,6 @@
 package com.android.cellbroadcastreceiver;
 
 import android.app.IntentService;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
@@ -25,7 +24,6 @@ import android.os.SystemProperties;
 import android.preference.PreferenceManager;
 import android.telephony.CellBroadcastMessage;
 import android.telephony.SmsManager;
-import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -135,13 +133,7 @@ public class CellBroadcastConfigService extends IntentService {
                 boolean enableEmergencyAlerts = prefs.getBoolean(
                         CellBroadcastSettings.KEY_ENABLE_EMERGENCY_ALERTS, true);
 
-                TelephonyManager tm = (TelephonyManager) getSystemService(
-                        Context.TELEPHONY_SERVICE);
-
-                boolean enableChannel50Support = res.getBoolean(R.bool.show_brazil_settings) ||
-                        "br".equals(tm.getSimCountryIso());
-
-                boolean enableChannel50Alerts = enableChannel50Support &&
+                boolean enableChannel50Alerts = res.getBoolean(R.bool.show_brazil_settings) &&
                         prefs.getBoolean(CellBroadcastSettings.KEY_ENABLE_CHANNEL_50_ALERTS, true);
 
                 SmsManager manager = SmsManager.getDefault();

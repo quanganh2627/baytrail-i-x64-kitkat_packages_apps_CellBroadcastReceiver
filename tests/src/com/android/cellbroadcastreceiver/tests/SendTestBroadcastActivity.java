@@ -72,15 +72,6 @@ public class SendTestBroadcastActivity extends Activity {
     }
 
     /**
-     * Return the value of the category field.
-     * @return the current value of the category text field
-     */
-    private int getCategory() {
-        EditText categoryField = (EditText) findViewById(R.id.category_id);
-        return Integer.parseInt(categoryField.getText().toString());
-    }
-
-    /**
      * Initialization of the Activity after it is first created.  Must at least
      * call {@link android.app.Activity#setContentView(int)} to
      * describe what is to be displayed in the screen.
@@ -94,11 +85,7 @@ public class SendTestBroadcastActivity extends Activity {
         /* Set message ID to a random value from 1-65535. */
         EditText messageIdField = (EditText) findViewById(R.id.message_id);
         messageIdField.setText(String.valueOf(new Random().nextInt(65535) + 1));
-
-        /* When category ID is non-zero, use it for the GSM/UMTS message identifier. */
-        EditText categoryIdField = (EditText) findViewById(R.id.category_id);
-        categoryIdField.setText("0");
-
+                
         /* Send an ETWS normal broadcast message to app. */
         Button etwsNormalTypeButton = (Button) findViewById(R.id.button_etws_normal_type);
         etwsNormalTypeButton.setOnClickListener(new OnClickListener() {
@@ -107,8 +94,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendEtwsMessageNormal(SendTestBroadcastActivity.this,
-                            getMessageId());
+                    SendTestMessages.testSendEtwsMessageNormal(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -121,8 +107,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendEtwsMessageCancel(SendTestBroadcastActivity.this,
-                            getMessageId());
+                    SendTestMessages.testSendEtwsMessageCancel(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -135,8 +120,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendEtwsMessageTest(SendTestBroadcastActivity.this,
-                            getMessageId());
+                    SendTestMessages.testSendEtwsMessageTest(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -219,8 +203,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessage7bit(SendTestBroadcastActivity.this,
-                            getMessageId(), getCategory());
+                    SendTestMessages.testSendMessage7bit(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -233,8 +216,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessage7bitUmts(SendTestBroadcastActivity.this,
-                            getMessageId(), getCategory());
+                    SendTestMessages.testSendMessage7bitUmts(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -247,8 +229,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessage7bitNoPadding(SendTestBroadcastActivity.this,
-                            getMessageId(), getCategory());
+                    SendTestMessages.testSendMessage7bitNoPadding(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -262,8 +243,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessage7bitNoPaddingUmts(
-                            SendTestBroadcastActivity.this, getMessageId(), getCategory());
+                    SendTestMessages.testSendMessage7bitNoPaddingUmts(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -277,8 +257,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessage7bitMultipageGsm(SendTestBroadcastActivity.this,
-                            getMessageId(), getCategory());
+                    SendTestMessages.testSendMessage7bitMultipageGsm(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -292,8 +271,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessage7bitMultipageUmts(
-                            SendTestBroadcastActivity.this, getMessageId(), getCategory());
+                    SendTestMessages.testSendMessage7bitMultipageUmts(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -307,8 +285,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessage7bitWithLanguage(SendTestBroadcastActivity.this,
-                            getMessageId(), getCategory());
+                    SendTestMessages.testSendMessage7bitWithLanguage(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -323,7 +300,7 @@ public class SendTestBroadcastActivity extends Activity {
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
                     SendTestMessages.testSendMessage7bitWithLanguageInBody(
-                            SendTestBroadcastActivity.this, getMessageId(), getCategory());
+                            SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -337,8 +314,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessage7bitWithLanguageInBodyUmts(
-                            SendTestBroadcastActivity.this, getMessageId(), getCategory());
+                    SendTestMessages.testSendMessage7bitWithLanguageInBodyUmts(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -351,8 +327,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessageUcs2(SendTestBroadcastActivity.this,
-                            getMessageId(), getCategory());
+                    SendTestMessages.testSendMessageUcs2(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -365,8 +340,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessageUcs2Umts(SendTestBroadcastActivity.this,
-                            getMessageId(), getCategory());
+                    SendTestMessages.testSendMessageUcs2Umts(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -380,8 +354,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessageUcs2MultipageUmts(
-                            SendTestBroadcastActivity.this, getMessageId(), getCategory());
+                    SendTestMessages.testSendMessageUcs2MultipageUmts(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -395,8 +368,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessageUcs2WithLanguageInBody(
-                            SendTestBroadcastActivity.this, getMessageId(), getCategory());
+                    SendTestMessages.testSendMessageUcs2WithLanguageInBody(SendTestBroadcastActivity.this);
                 }
             }
         });
@@ -410,8 +382,7 @@ public class SendTestBroadcastActivity extends Activity {
                     Message msg = mDelayHandler.obtainMessage(0, this);
                     mDelayHandler.sendMessageDelayed(msg, DELAY_BEFORE_SENDING_MSEC);
                 } else {
-                    SendTestMessages.testSendMessageUcs2WithLanguageUmts(
-                            SendTestBroadcastActivity.this, getMessageId(), getCategory());
+                    SendTestMessages.testSendMessageUcs2WithLanguageUmts(SendTestBroadcastActivity.this);
                 }
             }
         });
