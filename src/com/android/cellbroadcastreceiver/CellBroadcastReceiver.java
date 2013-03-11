@@ -28,15 +28,12 @@ import android.telephony.TelephonyManager;
 import android.telephony.cdma.CdmaSmsCbProgramData;
 import android.util.Log;
 
-import com.android.internal.telephony.IccCardConstants;
 import com.android.internal.telephony.ITelephony;
-import com.android.internal.telephony.TelephonyIntents;
 import com.android.internal.telephony.cdma.sms.SmsEnvelope;
 
 public class CellBroadcastReceiver extends BroadcastReceiver {
     private static final String TAG = "CellBroadcastReceiver";
     static final boolean DBG = true;    // STOPSHIP: change to false before ship
-    static String prevSimState = IccCardConstants.INTENT_VALUE_ICC_NOT_READY;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -48,17 +45,8 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
 
         String action = intent.getAction();
 
-        String simState = IccCardConstants.INTENT_VALUE_ICC_NOT_READY;
-
-        if (action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED)) {
-            simState = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
-            if (DBG) Log.d(TAG, "receive intent with simState : " + simState);
-            if (IccCardConstants.INTENT_VALUE_ICC_LOADED.equals(simState) &&
-                    !prevSimState.equals(simState)) {
-                if (DBG) Log.d(TAG, "startConfigService.");
-                startConfigService(context);
-            }
-            prevSimState = simState;
+        if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
+            startConfigService(context);
         } else if (Intent.ACTION_AIRPLANE_MODE_CHANGED.equals(action)) {
             boolean airplaneModeOn = intent.getBooleanExtra("state", false);
             if (!airplaneModeOn) {
