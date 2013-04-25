@@ -21,6 +21,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.UserHandle;
@@ -55,8 +56,12 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
         String action = intent.getAction();
 
         if (TelephonyIntents.ACTION_SERVICE_STATE_CHANGED.equals(action)) {
-            ServiceState ss = ServiceState.newFromBundle(intent.getExtras());
+            Bundle extras = intent.getExtras();
+            if (extras == null) {
+                return;
+            }
 
+            ServiceState ss = ServiceState.newFromBundle(extras);
             if (ss != null) {
                 int newState = ss.getState();
                 if (newState != CellBroadcastReceiverApp.mServiceState) {
