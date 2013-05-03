@@ -57,19 +57,24 @@ public class CellBroadcastAlertService extends Service {
     static final String CB_AREA_INFO_RECEIVED_ACTION =
             "android.cellbroadcastreceiver.CB_AREA_INFO_RECEIVED";
 
-    /** Container for message ID and geographical scope, for duplicate message detection. */
+    /** Container for message ID and geographical scope and sevice Category,
+        for duplicate message detection. */
     private static final class MessageIdAndScope {
         private final int mMessageId;
         private final SmsCbLocation mLocation;
+        private final int mServiceCategory;
 
-        MessageIdAndScope(int messageId, SmsCbLocation location) {
+        MessageIdAndScope(int messageId, SmsCbLocation location, int serviceCategory) {
             mMessageId = messageId;
             mLocation = location;
+            mServiceCategory = serviceCategory;
         }
 
         @Override
         public int hashCode() {
-            return mMessageId * 31 + mLocation.hashCode();
+            int hash = mMessageId * 31 + mLocation.hashCode();
+            hash = hash * 31 + mServiceCategory;
+            return hash;
         }
 
         @Override
@@ -79,14 +84,16 @@ public class CellBroadcastAlertService extends Service {
             }
             if (o instanceof MessageIdAndScope) {
                 MessageIdAndScope other = (MessageIdAndScope) o;
-                return (mMessageId == other.mMessageId && mLocation.equals(other.mLocation));
+                return (mMessageId == other.mMessageId && mLocation.equals(other.mLocation)
+                        && mServiceCategory == other.mServiceCategory);
             }
             return false;
         }
 
         @Override
         public String toString() {
-            return "{messageId: " + mMessageId + " location: " + mLocation.toString() + '}';
+            return "{messageId: " + mMessageId + " location: " + mLocation.toString()
+                    + " serviceCategory: " + mServiceCategory + '}';
         }
     }
 
@@ -142,7 +149,7 @@ public class CellBroadcastAlertService extends Service {
         // are stored in volatile memory. If the maximum of 65535 messages is reached, the
         // message ID of the oldest message is deleted from the list.
         MessageIdAndScope newMessageId = new MessageIdAndScope(message.getSerialNumber(),
-                message.getLocation());
+                message.getLocation(), message.getServiceCategory());
 
         // Add the new message ID to the list. It's okay if this is a duplicate message ID,
         // because the list is only used for removing old message IDs from the hash set.
