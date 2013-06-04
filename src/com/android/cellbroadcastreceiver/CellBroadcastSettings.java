@@ -91,50 +91,44 @@ public class CellBroadcastSettings extends PreferenceActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Display the fragment as the main content.
-        getFragmentManager().beginTransaction().replace(android.R.id.content,
-                new CellBroadcastSettingsFragment()).commit();
-    }
+        // Load the preferences from an XML resource
+        addPreferencesFromResource(R.xml.preferences);
 
-    /**
-     * New fragment-style implementation of preferences.
-     */
-    public static class CellBroadcastSettingsFragment extends PreferenceFragment {
+        PreferenceScreen preferenceScreen = getPreferenceScreen();
 
-        @Override
-        public void onCreate(Bundle savedInstanceState) {
-            super.onCreate(savedInstanceState);
+        // Handler for settings that require us to reconfigure enabled channels in radio
+        Preference.OnPreferenceChangeListener startConfigServiceListener =
+                new Preference.OnPreferenceChangeListener() {
+                    @Override
+                    public boolean onPreferenceChange(Preference pref, Object newValue) {
+                        CellBroadcastReceiver.startConfigService(pref.getContext());
+                        return true;
+                    }
+                };
 
-            // Load the preferences from an XML resource
-            addPreferencesFromResource(R.xml.preferences);
+        // Show extra settings when developer options is enabled in settings.
+        boolean enableDevSettings = Settings.Global.getInt(getContentResolver(),
+                Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0;
 
-            PreferenceScreen preferenceScreen = getPreferenceScreen();
+        Resources res = getResources();
+        boolean showEtwsSettings = res.getBoolean(R.bool.show_etws_settings);
 
-            // Handler for settings that require us to reconfigure enabled channels in radio
-            Preference.OnPreferenceChangeListener startConfigServiceListener =
-                    new Preference.OnPreferenceChangeListener() {
-                        @Override
-                        public boolean onPreferenceChange(Preference pref, Object newValue) {
-                            CellBroadcastReceiver.startConfigService(pref.getContext());
-                            return true;
-                        }
-                    };
+        // Emergency alert preference category (general and CMAS preferences).
+        PreferenceCategory alertCategory = (PreferenceCategory)
+                findPreference(KEY_CATEGORY_ALERT_SETTINGS);
 
-            // Show extra settings when developer options is enabled in settings.
-            boolean enableDevSettings = Settings.Global.getInt(getActivity().getContentResolver(),
-                    Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0;
+        // Show alert settings and ETWS categories for ETWS builds and developer mode.
+        if (enableDevSettings || showEtwsSettings) {
+            // enable/disable all alerts
+            Preference enablePwsAlerts = findPreference(KEY_ENABLE_EMERGENCY_ALERTS);
+            if (enablePwsAlerts != null) {
+                enablePwsAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
+            }
 
-            Resources res = getResources();
-            boolean showEtwsSettings = res.getBoolean(R.bool.show_etws_settings);
-
-            // Emergency alert preference category (general and CMAS preferences).
-            PreferenceCategory alertCategory = (PreferenceCategory)
-                    findPreference(KEY_CATEGORY_ALERT_SETTINGS);
-
-            // alert reminder interval
-            ListPreference interval = (ListPreference) findPreference(KEY_ALERT_REMINDER_INTERVAL);
-            interval.setSummary(interval.getEntry());
-            interval.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+            // alert sound duration
+            ListPreference duration = (ListPreference) findPreference(KEY_ALERT_SOUND_DURATION);
+            duration.setSummary(duration.getEntry());
+            duration.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
                 @Override
                 public boolean onPreferenceChange(Preference pref, Object newValue) {
                     final ListPreference listPref = (ListPreference) pref;
@@ -143,84 +137,39 @@ public class CellBroadcastSettings extends PreferenceActivity {
                     return true;
                 }
             });
+        } else {
+            // Remove general emergency alert preference items (not shown for CMAS builds).
+            alertCategory.removePreference(findPreference(KEY_ENABLE_EMERGENCY_ALERTS));
+            alertCategory.removePreference(findPreference(KEY_ALERT_SOUND_DURATION));
+            alertCategory.removePreference(findPreference(KEY_ENABLE_ALERT_SPEECH));
+            // Remove ETWS preference category.
+            preferenceScreen.removePreference(findPreference(KEY_CATEGORY_ETWS_SETTINGS));
+        }
 
-            // Show alert settings and ETWS categories for ETWS builds and developer mode.
-            if (enableDevSettings || showEtwsSettings) {
-                // enable/disable all alerts
-                Preference enablePwsAlerts = findPreference(KEY_ENABLE_EMERGENCY_ALERTS);
-                if (enablePwsAlerts != null) {
-                    enablePwsAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
-                }
+        if (!res.getBoolean(R.bool.show_cmas_settings)) {
+            // Remove CMAS preference items in emergency alert category.
+            alertCategory.removePreference(
+                    findPreference(KEY_ENABLE_CMAS_EXTREME_THREAT_ALERTS));
+            alertCategory.removePreference(
+                    findPreference(KEY_ENABLE_CMAS_SEVERE_THREAT_ALERTS));
+            alertCategory.removePreference(findPreference(KEY_ENABLE_CMAS_AMBER_ALERTS));
+        }
 
-                // alert sound duration
-                ListPreference duration = (ListPreference) findPreference(KEY_ALERT_SOUND_DURATION);
-                duration.setSummary(duration.getEntry());
-                duration.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                    @Override
-                    public boolean onPreferenceChange(Preference pref, Object newValue) {
-                        final ListPreference listPref = (ListPreference) pref;
-                        final int idx = listPref.findIndexOfValue((String) newValue);
-                        listPref.setSummary(listPref.getEntries()[idx]);
-                        return true;
-                    }
-                });
-            } else {
-                // Remove general emergency alert preference items (not shown for CMAS builds).
-                alertCategory.removePreference(findPreference(KEY_ENABLE_EMERGENCY_ALERTS));
-                alertCategory.removePreference(findPreference(KEY_ALERT_SOUND_DURATION));
-                alertCategory.removePreference(findPreference(KEY_ENABLE_ALERT_SPEECH));
-                // Remove ETWS preference category.
-                preferenceScreen.removePreference(findPreference(KEY_CATEGORY_ETWS_SETTINGS));
-            }
+        TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 
-            if (!res.getBoolean(R.bool.show_cmas_settings)) {
-                // Remove CMAS preference items in emergency alert category.
-                alertCategory.removePreference(
-                        findPreference(KEY_ENABLE_CMAS_EXTREME_THREAT_ALERTS));
-                alertCategory.removePreference(
-                        findPreference(KEY_ENABLE_CMAS_SEVERE_THREAT_ALERTS));
-                alertCategory.removePreference(findPreference(KEY_ENABLE_CMAS_AMBER_ALERTS));
-            }
+        boolean enableChannel50Support = res.getBoolean(R.bool.show_brazil_settings) ||
+                "br".equals(tm.getSimCountryIso());
 
-            TelephonyManager tm = (TelephonyManager) getActivity().getSystemService(
-                    Context.TELEPHONY_SERVICE);
+        if (!enableChannel50Support) {
+            preferenceScreen.removePreference(findPreference(KEY_CATEGORY_BRAZIL_SETTINGS));
+        }
+        if (!enableDevSettings) {
+            preferenceScreen.removePreference(findPreference(KEY_CATEGORY_DEV_SETTINGS));
+        }
 
-            boolean enableChannel50Support = res.getBoolean(R.bool.show_brazil_settings) ||
-                    "br".equals(tm.getSimCountryIso());
-
-            if (!enableChannel50Support) {
-                preferenceScreen.removePreference(findPreference(KEY_CATEGORY_BRAZIL_SETTINGS));
-            }
-            if (!enableDevSettings) {
-                preferenceScreen.removePreference(findPreference(KEY_CATEGORY_DEV_SETTINGS));
-            }
-
-            Preference enableChannel50Alerts = findPreference(KEY_ENABLE_CHANNEL_50_ALERTS);
-            if (enableChannel50Alerts != null) {
-                enableChannel50Alerts.setOnPreferenceChangeListener(startConfigServiceListener);
-            }
-            Preference enableEtwsAlerts = findPreference(KEY_ENABLE_ETWS_TEST_ALERTS);
-            if (enableEtwsAlerts != null) {
-                enableEtwsAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
-            }
-            Preference enableCmasExtremeAlerts =
-                    findPreference(KEY_ENABLE_CMAS_EXTREME_THREAT_ALERTS);
-            if (enableCmasExtremeAlerts != null) {
-                enableCmasExtremeAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
-            }
-            Preference enableCmasSevereAlerts =
-                    findPreference(KEY_ENABLE_CMAS_SEVERE_THREAT_ALERTS);
-            if (enableCmasSevereAlerts != null) {
-                enableCmasSevereAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
-            }
-            Preference enableCmasAmberAlerts = findPreference(KEY_ENABLE_CMAS_AMBER_ALERTS);
-            if (enableCmasAmberAlerts != null) {
-                enableCmasAmberAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
-            }
-            Preference enableCmasTestAlerts = findPreference(KEY_ENABLE_CMAS_TEST_ALERTS);
-            if (enableCmasTestAlerts != null) {
-                enableCmasTestAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
-            }
+        Preference enableChannel50Alerts = findPreference(KEY_ENABLE_CHANNEL_50_ALERTS);
+        if (enableChannel50Alerts != null) {
+            enableChannel50Alerts.setOnPreferenceChangeListener(startConfigServiceListener);
         }
     }
 }
