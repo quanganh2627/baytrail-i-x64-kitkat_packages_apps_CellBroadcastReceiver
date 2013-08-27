@@ -89,85 +89,101 @@ public class CellBroadcastSettings extends PreferenceActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Load the preferences from an XML resource
-        addPreferencesFromResource(R.xml.preferences);
+        // Display the fragment as the main content.
+        getFragmentManager().beginTransaction().replace(android.R.id.content,
+                new CellBroadcastSettingsFragment()).commit();
+    }
 
-        PreferenceScreen preferenceScreen = getPreferenceScreen();
+    /**
+     * New fragment-style implementation of preferences.
+     */
+    public static class CellBroadcastSettingsFragment extends PreferenceFragment {
 
-        // Handler for settings that require us to reconfigure enabled channels in radio
-        Preference.OnPreferenceChangeListener startConfigServiceListener =
-                new Preference.OnPreferenceChangeListener() {
+        @Override
+        public void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+
+            // Load the preferences from an XML resource
+            addPreferencesFromResource(R.xml.preferences);
+
+            PreferenceScreen preferenceScreen = getPreferenceScreen();
+
+            // Handler for settings that require us to reconfigure enabled channels in radio
+            Preference.OnPreferenceChangeListener startConfigServiceListener =
+                    new Preference.OnPreferenceChangeListener() {
+                        @Override
+                        public boolean onPreferenceChange(Preference pref, Object newValue) {
+                            CellBroadcastReceiver.startConfigService(pref.getContext());
+                            return true;
+                        }
+                    };
+
+            // Show extra settings when developer options is enabled in settings.
+            boolean enableDevSettings = Settings.Global.getInt(getActivity().getContentResolver(),
+                    Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0;
+
+            Resources res = getResources();
+            boolean showEtwsSettings = res.getBoolean(R.bool.show_etws_settings);
+
+            // Emergency alert preference category (general and CMAS preferences).
+            PreferenceCategory alertCategory = (PreferenceCategory)
+                    findPreference(KEY_CATEGORY_ALERT_SETTINGS);
+
+            // Show alert settings and ETWS categories for ETWS builds and developer mode.
+            if (enableDevSettings || showEtwsSettings) {
+                // enable/disable all alerts
+                Preference enablePwsAlerts = findPreference(KEY_ENABLE_EMERGENCY_ALERTS);
+                if (enablePwsAlerts != null) {
+                    enablePwsAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
+                }
+
+                // alert sound duration
+                ListPreference duration = (ListPreference) findPreference(KEY_ALERT_SOUND_DURATION);
+                duration.setSummary(duration.getEntry());
+                duration.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
                     @Override
                     public boolean onPreferenceChange(Preference pref, Object newValue) {
-                        CellBroadcastReceiver.startConfigService(pref.getContext());
+                        final ListPreference listPref = (ListPreference) pref;
+                        final int idx = listPref.findIndexOfValue((String) newValue);
+                        listPref.setSummary(listPref.getEntries()[idx]);
                         return true;
                     }
-                };
-
-        // Show extra settings when developer options is enabled in settings.
-        boolean enableDevSettings = Settings.Global.getInt(getContentResolver(),
-                Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0;
-
-        Resources res = getResources();
-        boolean showEtwsSettings = res.getBoolean(R.bool.show_etws_settings);
-
-        // Emergency alert preference category (general and CMAS preferences).
-        PreferenceCategory alertCategory = (PreferenceCategory)
-                findPreference(KEY_CATEGORY_ALERT_SETTINGS);
-
-        // Show alert settings and ETWS categories for ETWS builds and developer mode.
-        if (enableDevSettings || showEtwsSettings) {
-            // enable/disable all alerts
-            Preference enablePwsAlerts = findPreference(KEY_ENABLE_EMERGENCY_ALERTS);
-            if (enablePwsAlerts != null) {
-                enablePwsAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
+                });
+            } else {
+                // Remove general emergency alert preference items (not shown for CMAS builds).
+                alertCategory.removePreference(findPreference(KEY_ENABLE_EMERGENCY_ALERTS));
+                alertCategory.removePreference(findPreference(KEY_ALERT_SOUND_DURATION));
+                alertCategory.removePreference(findPreference(KEY_ENABLE_ALERT_SPEECH));
+                // Remove ETWS preference category.
+                preferenceScreen.removePreference(findPreference(KEY_CATEGORY_ETWS_SETTINGS));
             }
 
-            // alert sound duration
-            ListPreference duration = (ListPreference) findPreference(KEY_ALERT_SOUND_DURATION);
-            duration.setSummary(duration.getEntry());
-            duration.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
-                @Override
-                public boolean onPreferenceChange(Preference pref, Object newValue) {
-                    final ListPreference listPref = (ListPreference) pref;
-                    final int idx = listPref.findIndexOfValue((String) newValue);
-                    listPref.setSummary(listPref.getEntries()[idx]);
-                    return true;
-                }
-            });
-        } else {
-            // Remove general emergency alert preference items (not shown for CMAS builds).
-            alertCategory.removePreference(findPreference(KEY_ENABLE_EMERGENCY_ALERTS));
-            alertCategory.removePreference(findPreference(KEY_ALERT_SOUND_DURATION));
-            alertCategory.removePreference(findPreference(KEY_ENABLE_ALERT_SPEECH));
-            // Remove ETWS preference category.
-            preferenceScreen.removePreference(findPreference(KEY_CATEGORY_ETWS_SETTINGS));
-        }
+            if (!res.getBoolean(R.bool.show_cmas_settings)) {
+                // Remove CMAS preference items in emergency alert category.
+                alertCategory.removePreference(
+                        findPreference(KEY_ENABLE_CMAS_EXTREME_THREAT_ALERTS));
+                alertCategory.removePreference(
+                        findPreference(KEY_ENABLE_CMAS_SEVERE_THREAT_ALERTS));
+                alertCategory.removePreference(findPreference(KEY_ENABLE_CMAS_AMBER_ALERTS));
+            }
 
-        if (!res.getBoolean(R.bool.show_cmas_settings)) {
-            // Remove CMAS preference items in emergency alert category.
-            alertCategory.removePreference(
-                    findPreference(KEY_ENABLE_CMAS_EXTREME_THREAT_ALERTS));
-            alertCategory.removePreference(
-                    findPreference(KEY_ENABLE_CMAS_SEVERE_THREAT_ALERTS));
-            alertCategory.removePreference(findPreference(KEY_ENABLE_CMAS_AMBER_ALERTS));
-        }
+            TelephonyManager tm = (TelephonyManager) getActivity().getSystemService(
+                    Context.TELEPHONY_SERVICE);
 
-        TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+            boolean enableChannel50Support = res.getBoolean(R.bool.show_brazil_settings) ||
+                    "br".equals(tm.getSimCountryIso());
 
-        boolean enableChannel50Support = res.getBoolean(R.bool.show_brazil_settings) ||
-                "br".equals(tm.getSimCountryIso());
+            if (!enableChannel50Support) {
+                preferenceScreen.removePreference(findPreference(KEY_CATEGORY_BRAZIL_SETTINGS));
+            }
+            if (!enableDevSettings) {
+                preferenceScreen.removePreference(findPreference(KEY_CATEGORY_DEV_SETTINGS));
+            }
 
-        if (!enableChannel50Support) {
-            preferenceScreen.removePreference(findPreference(KEY_CATEGORY_BRAZIL_SETTINGS));
-        }
-        if (!enableDevSettings) {
-            preferenceScreen.removePreference(findPreference(KEY_CATEGORY_DEV_SETTINGS));
-        }
-
-        Preference enableChannel50Alerts = findPreference(KEY_ENABLE_CHANNEL_50_ALERTS);
-        if (enableChannel50Alerts != null) {
-            enableChannel50Alerts.setOnPreferenceChangeListener(startConfigServiceListener);
+            Preference enableChannel50Alerts = findPreference(KEY_ENABLE_CHANNEL_50_ALERTS);
+            if (enableChannel50Alerts != null) {
+                enableChannel50Alerts.setOnPreferenceChangeListener(startConfigServiceListener);
+            }
         }
     }
 }

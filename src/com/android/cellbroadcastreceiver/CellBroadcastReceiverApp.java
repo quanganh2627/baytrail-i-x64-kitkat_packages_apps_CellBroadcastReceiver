@@ -31,15 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class CellBroadcastReceiverApp extends Application {
     private static final String TAG = "CellBroadcastReceiverApp";
 
-    private static final int SERVICE_STATE_UNKNOWN = -1;
-
-    /*
-     * Used by CellBroadcastReceiver to start the configuration service.
-     * Configuration service will be started if the new state is not the same as
-     * mServiceState and new state is either In Service or Emergency only.
-     */
-    public static int mServiceState = SERVICE_STATE_UNKNOWN;
-
     @Override
     public void onCreate() {
         super.onCreate();
