@@ -21,6 +21,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.UserHandle;
@@ -35,10 +36,11 @@ import android.util.Log;
 
 import com.android.internal.telephony.ITelephony;
 import com.android.internal.telephony.cdma.sms.SmsEnvelope;
+import com.android.internal.telephony.TelephonyIntents;
 
 public class CellBroadcastReceiver extends BroadcastReceiver {
     private static final String TAG = "CellBroadcastReceiver";
-    static final boolean DBG = true;    // STOPSHIP: change to false before ship
+    static final boolean DBG = false;
 
     private static final String GET_LATEST_CB_AREA_INFO_ACTION =
             "android.cellbroadcastreceiver.GET_LATEST_CB_AREA_INFO";
@@ -53,14 +55,26 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
 
         String action = intent.getAction();
 
-        if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
-            if (DBG) log("Registering for ServiceState updates");
-            TelephonyManager tm = (TelephonyManager) context.getSystemService(
-                    Context.TELEPHONY_SERVICE);
-            tm.listen(new ServiceStateListener(context.getApplicationContext()),
-                    PhoneStateListener.LISTEN_SERVICE_STATE);
+        if (TelephonyIntents.ACTION_SERVICE_STATE_CHANGED.equals(action)) {
+            Bundle extras = intent.getExtras();
+            if (extras == null) {
+                return;
+            }
+
+            ServiceState ss = ServiceState.newFromBundle(extras);
+            if (ss != null) {
+                int newState = ss.getState();
+                if (newState != CellBroadcastReceiverApp.mServiceState) {
+                    CellBroadcastReceiverApp.mServiceState = newState;
+                    if (newState == ServiceState.STATE_IN_SERVICE ||
+                            newState == ServiceState.STATE_EMERGENCY_ONLY) {
+                        startConfigService(context);
+                    }
+                }
+            }
         } else if (Intent.ACTION_AIRPLANE_MODE_CHANGED.equals(action)) {
             boolean airplaneModeOn = intent.getBooleanExtra("state", false);
+            if (DBG) log("airplaneModeOn: " + airplaneModeOn);
             if (!airplaneModeOn) {
                 startConfigService(context);
             }
@@ -74,7 +88,7 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
                 intent.setClass(context, CellBroadcastAlertService.class);
                 context.startService(intent);
             } else {
-                Log.e(TAG, "ignoring unprivileged action received " + action);
+                loge("ignoring unprivileged action received " + action);
             }
         } else if (Telephony.Sms.Intents.SMS_SERVICE_CATEGORY_PROGRAM_DATA_RECEIVED_ACTION
                 .equals(action)) {
@@ -84,10 +98,10 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
                 if (programDataList != null) {
                     handleCdmaSmsCbProgramData(context, programDataList);
                 } else {
-                    Log.e(TAG, "SCPD intent received with no program_data_list");
+                    loge("SCPD intent received with no program_data_list");
                 }
             } else {
-                Log.e(TAG, "ignoring unprivileged action received " + action);
+                loge("ignoring unprivileged action received " + action);
             }
         } else if (GET_LATEST_CB_AREA_INFO_ACTION.equals(action)) {
             if (privileged) {
@@ -138,7 +152,7 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
                     break;
 
                 default:
-                    Log.e(TAG, "Ignoring unknown SCPD operation " + programData.getOperation());
+                    loge("Ignoring unknown SCPD operation " + programData.getOperation());
             }
         }
     }
@@ -180,19 +194,15 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
      * @param context the broadcast receiver context
      */
     static void startConfigService(Context context) {
-        if (phoneIsCdma()) {
-            if (DBG) log("CDMA phone detected; doing nothing");
-        } else {
-            Intent serviceIntent = new Intent(CellBroadcastConfigService.ACTION_ENABLE_CHANNELS,
-                    null, context, CellBroadcastConfigService.class);
-            context.startService(serviceIntent);
-        }
+        Intent serviceIntent = new Intent(CellBroadcastConfigService.ACTION_ENABLE_CHANNELS,
+                null, context, CellBroadcastConfigService.class);
+        context.startService(serviceIntent);
     }
 
     /**
      * @return true if the phone is a CDMA phone type
      */
-    private static boolean phoneIsCdma() {
+    static boolean phoneIsCdma() {
         boolean isCdma = false;
         try {
             ITelephony phone = ITelephony.Stub.asInterface(ServiceManager.checkService("phone"));
@@ -205,29 +215,11 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
         return isCdma;
     }
 
-    private static class ServiceStateListener extends PhoneStateListener {
-        private final Context mContext;
-        private int mServiceState = -1;
-
-        ServiceStateListener(Context context) {
-            mContext = context;
-        }
-
-        @Override
-        public void onServiceStateChanged(ServiceState ss) {
-            int newState = ss.getState();
-            if (newState != mServiceState) {
-                Log.d(TAG, "Service state changed! " + newState + " Full: " + ss);
-                mServiceState = newState;
-                if (newState == ServiceState.STATE_IN_SERVICE ||
-                        newState == ServiceState.STATE_EMERGENCY_ONLY) {
-                    startConfigService(mContext);
-                }
-            }
-        }
-    }
-
     private static void log(String msg) {
         Log.d(TAG, msg);
+    }
+
+    private static void loge(String msg) {
+        Log.e(TAG, msg);
     }
 }
