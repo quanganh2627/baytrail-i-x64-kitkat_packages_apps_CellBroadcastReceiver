@@ -117,6 +117,19 @@ public class CellBroadcastSettings extends PreferenceActivity {
         PreferenceCategory alertCategory = (PreferenceCategory)
                 findPreference(KEY_CATEGORY_ALERT_SETTINGS);
 
+        // alert reminder interval
+        ListPreference interval = (ListPreference) findPreference(KEY_ALERT_REMINDER_INTERVAL);
+        interval.setSummary(interval.getEntry());
+        interval.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(Preference pref, Object newValue) {
+                final ListPreference listPref = (ListPreference) pref;
+                final int idx = listPref.findIndexOfValue((String) newValue);
+                listPref.setSummary(listPref.getEntries()[idx]);
+                return true;
+            }
+        });
+
         // Show alert settings and ETWS categories for ETWS builds and developer mode.
         if (enableDevSettings || showEtwsSettings) {
             // enable/disable all alerts
@@ -170,6 +183,28 @@ public class CellBroadcastSettings extends PreferenceActivity {
         Preference enableChannel50Alerts = findPreference(KEY_ENABLE_CHANNEL_50_ALERTS);
         if (enableChannel50Alerts != null) {
             enableChannel50Alerts.setOnPreferenceChangeListener(startConfigServiceListener);
+        }
+        Preference enableEtwsAlerts = findPreference(KEY_ENABLE_ETWS_TEST_ALERTS);
+        if (enableEtwsAlerts != null) {
+            enableEtwsAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
+        }
+        Preference enableCmasExtremeAlerts =
+                findPreference(KEY_ENABLE_CMAS_EXTREME_THREAT_ALERTS);
+        if (enableCmasExtremeAlerts != null) {
+            enableCmasExtremeAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
+        }
+        Preference enableCmasSevereAlerts =
+                findPreference(KEY_ENABLE_CMAS_SEVERE_THREAT_ALERTS);
+        if (enableCmasSevereAlerts != null) {
+            enableCmasSevereAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
+        }
+        Preference enableCmasAmberAlerts = findPreference(KEY_ENABLE_CMAS_AMBER_ALERTS);
+        if (enableCmasAmberAlerts != null) {
+            enableCmasAmberAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
+        }
+        Preference enableCmasTestAlerts = findPreference(KEY_ENABLE_CMAS_TEST_ALERTS);
+        if (enableCmasTestAlerts != null) {
+            enableCmasTestAlerts.setOnPreferenceChangeListener(startConfigServiceListener);
         }
     }
 }
