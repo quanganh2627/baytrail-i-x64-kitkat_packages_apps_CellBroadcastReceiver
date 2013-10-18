@@ -21,7 +21,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.os.Bundle;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.UserHandle;
@@ -36,6 +35,7 @@ import android.util.Log;
 
 import com.android.internal.telephony.ITelephony;
 import com.android.internal.telephony.cdma.sms.SmsEnvelope;
+import com.android.internal.telephony.IccCardConstants;
 import com.android.internal.telephony.TelephonyIntents;
 
 public class CellBroadcastReceiver extends BroadcastReceiver {
@@ -55,22 +55,11 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
 
         String action = intent.getAction();
 
-        if (TelephonyIntents.ACTION_SERVICE_STATE_CHANGED.equals(action)) {
-            Bundle extras = intent.getExtras();
-            if (extras == null) {
-                return;
-            }
-
-            ServiceState ss = ServiceState.newFromBundle(extras);
-            if (ss != null) {
-                int newState = ss.getState();
-                if (newState != CellBroadcastReceiverApp.mServiceState) {
-                    CellBroadcastReceiverApp.mServiceState = newState;
-                    if (newState == ServiceState.STATE_IN_SERVICE ||
-                            newState == ServiceState.STATE_EMERGENCY_ONLY) {
-                        startConfigService(context);
-                    }
-                }
+        if (TelephonyIntents.ACTION_SIM_STATE_CHANGED.equals(action)) {
+            String stateExtra = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
+            if (stateExtra != null
+                    && IccCardConstants.INTENT_VALUE_ICC_LOADED.equals(stateExtra)) {
+                startConfigService(context);
             }
         } else if (Intent.ACTION_AIRPLANE_MODE_CHANGED.equals(action)) {
             boolean airplaneModeOn = intent.getBooleanExtra("state", false);
