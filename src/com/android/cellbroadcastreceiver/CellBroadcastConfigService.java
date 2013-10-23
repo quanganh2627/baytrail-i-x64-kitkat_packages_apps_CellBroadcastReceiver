@@ -87,14 +87,6 @@ public class CellBroadcastConfigService extends IntentService {
         } catch (NumberFormatException e) {
             Log.e(TAG, "Number Format Exception parsing emergency channel range", e);
         }
-
-        // Make sure CMAS Presidential is enabled (See 3GPP TS 22.268 Section 6.2).
-        if (DBG) log("setChannelRange: enabling CMAS Presidential");
-        if (CellBroadcastReceiver.phoneIsCdma()) {
-            manager.enableCellBroadcast(SmsEnvelope.SERVICE_CATEGORY_CMAS_PRESIDENTIAL_LEVEL_ALERT);
-        } else {
-            manager.enableCellBroadcast(SmsCbConstants.MESSAGE_ID_CMAS_ALERT_PRESIDENTIAL_LEVEL);
-        }
     }
 
     /**
@@ -262,8 +254,11 @@ public class CellBroadcastConfigService extends IntentService {
                         manager.disableCellBroadcast(cmasAmber);
                         manager.disableCellBroadcastRange(cmasTestStart, cmasTestEnd);
 
-                        // CMAS Presidential must be on (See 3GPP TS 22.268 Section 6.2).
-                        manager.enableCellBroadcast(cmasPresident);
+                        /*
+                         * As per 3GPP Ts 22.268 section 6.2, CMAS Presidential must be on only if
+                         * cell broadcast service is enabled on the UE.
+                         */
+                        manager.disableCellBroadcast(cmasPresident);
                     }
                     if (DBG) log("disabled emergency cell broadcast channels");
                 }
