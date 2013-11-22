@@ -148,7 +148,6 @@ public class CellBroadcastListActivity extends Activity {
             // Swap the new cursor in.  (The framework will take care of closing the
             // old cursor once we return.)
             mAdapter.swapCursor(data);
-            getActivity().invalidateOptionsMenu();
         }
 
         @Override
