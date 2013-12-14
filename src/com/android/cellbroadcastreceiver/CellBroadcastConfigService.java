@@ -87,14 +87,6 @@ public class CellBroadcastConfigService extends IntentService {
         } catch (NumberFormatException e) {
             Log.e(TAG, "Number Format Exception parsing emergency channel range", e);
         }
-
-        // Make sure CMAS Presidential is enabled (See 3GPP TS 22.268 Section 6.2).
-        if (DBG) log("setChannelRange: enabling CMAS Presidential");
-        if (CellBroadcastReceiver.phoneIsCdma()) {
-            manager.enableCellBroadcast(SmsEnvelope.SERVICE_CATEGORY_CMAS_PRESIDENTIAL_LEVEL_ALERT);
-        } else {
-            manager.enableCellBroadcast(SmsCbConstants.MESSAGE_ID_CMAS_ALERT_PRESIDENTIAL_LEVEL);
-        }
     }
 
     /**
@@ -262,22 +254,31 @@ public class CellBroadcastConfigService extends IntentService {
                         manager.disableCellBroadcast(cmasAmber);
                         manager.disableCellBroadcastRange(cmasTestStart, cmasTestEnd);
 
-                        // CMAS Presidential must be on (See 3GPP TS 22.268 Section 6.2).
-                        manager.enableCellBroadcast(cmasPresident);
+                        /*
+                         * As per 3GPP Ts 22.268 section 6.2, CMAS Presidential must be on only if
+                         * cell broadcast service is enabled on the UE.
+                         */
+                        manager.disableCellBroadcast(cmasPresident);
                     }
                     if (DBG) log("disabled emergency cell broadcast channels");
                 }
 
                 if (isCdma) {
-                    if (DBG) log("channel 50 is not aplicable for cdma");
+                    if (DBG) log("channel 50 is not applicable for cdma");
                 } else if (enableChannel50Alerts) {
                     if (DBG) log("enabling cell broadcast channel 50");
                     manager.enableCellBroadcast(50);
-                    if (DBG) log("enabled cell broadcast channel 50");
                 } else {
                     if (DBG) log("disabling cell broadcast channel 50");
                     manager.disableCellBroadcast(50);
-                    if (DBG) log("disabled cell broadcast channel 50");
+                }
+
+                if ("il".equals(tm.getSimCountryIso()) || "il".equals(tm.getNetworkCountryIso())) {
+                    if (DBG) log("enabling channels 919-928 for Israel");
+                    manager.enableCellBroadcastRange(919, 928);
+                } else {
+                    if (DBG) log("disabling channels 919-928");
+                    manager.disableCellBroadcastRange(919, 928);
                 }
 
                 // Disable per user preference/checkbox.
@@ -303,6 +304,14 @@ public class CellBroadcastConfigService extends IntentService {
                 if (!enableCmasTestAlerts) {
                     if (DBG) Log.d(TAG, "disabling cell broadcast CMAS test messages");
                     manager.disableCellBroadcastRange(cmasTestStart, cmasTestEnd);
+                }
+
+                if ("true".equals(SystemProperties.get("persist.conformance"))) {
+                    // add Channels 0 and 1 for the 3GPP conformance 34.3 Test Case
+                    manager.enableCellBroadcastRange(0, 1);
+                    // add Channel 0x03E7=999 support CBDD,
+                    // to pass 3GPP 51010-4 the section 27.22.5.2.1 Seq 1.3.
+                    manager.enableCellBroadcast(999);
                 }
             } catch (Exception ex) {
                 Log.e(TAG, "exception enabling cell broadcast channels", ex);
