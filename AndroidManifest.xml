@@ -59,9 +59,8 @@
 <!-- Uncomment this category to show the Cell Broadcasts launcher icon.
      Otherwise, set "config_cellBroadcastAppLinks" to true in a config.xml overlay
      to add links to Cell Broadcast activities via Settings and MMS menu items.
- -->
                 <category android:name="android.intent.category.LAUNCHER" />
-
+ -->
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>
@@ -120,7 +119,7 @@
 
         <receiver android:name="CellBroadcastReceiver">
             <intent-filter>
-                 <action android:name="android.intent.action.SIM_STATE_CHANGED" />
+                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
 
             <intent-filter>
