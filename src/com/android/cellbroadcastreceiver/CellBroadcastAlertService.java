@@ -35,6 +35,8 @@ import android.telephony.SmsCbLocation;
 import android.telephony.SmsCbMessage;
 import android.util.Log;
 
+import com.android.internal.telephony.TelephonyConstants;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 
@@ -138,7 +140,14 @@ public class CellBroadcastAlertService extends Service {
             return;
         }
 
-        final CellBroadcastMessage cbm = new CellBroadcastMessage(message);
+        // get SIM ID from intent
+        int simId = 0;
+        if (TelephonyConstants.IS_DSDS) {
+            /* GSM (for SIM 1) or GSM2 (for SIM 2) */
+            simId = extras.getString(TelephonyConstants.FROM_PHONE, "GSM").equals("GSM") ? 1 : 2;
+        }
+
+        final CellBroadcastMessage cbm = new CellBroadcastMessage(message, simId);
         if (!isMessageEnabledByUser(cbm)) {
             Log.d(TAG, "ignoring alert of type " + cbm.getServiceCategory() +
                     " by user preference");

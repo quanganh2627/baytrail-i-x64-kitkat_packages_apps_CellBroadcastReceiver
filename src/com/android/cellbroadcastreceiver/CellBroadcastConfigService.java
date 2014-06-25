@@ -31,6 +31,7 @@ import android.util.Log;
 
 import com.android.internal.telephony.cdma.sms.SmsEnvelope;
 import com.android.internal.telephony.gsm.SmsCbConstants;
+import com.android.internal.telephony.TelephonyConstants;
 
 import static com.android.cellbroadcastreceiver.CellBroadcastReceiver.DBG;
 
@@ -142,6 +143,19 @@ public class CellBroadcastConfigService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         if (ACTION_ENABLE_CHANNELS.equals(intent.getAction())) {
             try {
+                SmsManager manager = SmsManager.getDefault();
+                setCbSmsConfig(manager);
+                if (TelephonyConstants.IS_DSDS) {
+                    manager = SmsManager.get2ndSmsManager();
+                    setCbSmsConfig(manager);
+                }
+            } catch (Exception ex) {
+                Log.e(TAG, "exception enabling cell broadcast channels", ex);
+            }
+        }
+    }
+
+    private void setCbSmsConfig(SmsManager manager) {
                 SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
                 Resources res = getResources();
 
@@ -153,7 +167,8 @@ public class CellBroadcastConfigService extends IntentService {
                         CellBroadcastSettings.KEY_ENABLE_EMERGENCY_ALERTS, true);
 
                 TelephonyManager tm = (TelephonyManager) getSystemService(
-                        Context.TELEPHONY_SERVICE);
+                        manager == SmsManager.getDefault()
+                        ? Context.TELEPHONY_SERVICE : Context.TELEPHONY_SERVICE2);
 
                 boolean enableChannel50Support = res.getBoolean(R.bool.show_brazil_settings) ||
                         "br".equals(tm.getSimCountryIso());
@@ -202,7 +217,7 @@ public class CellBroadcastConfigService extends IntentService {
                     cmasPresident = SmsEnvelope.SERVICE_CATEGORY_CMAS_PRESIDENTIAL_LEVEL_ALERT;
                 }
 
-                SmsManager manager = SmsManager.getDefault();
+                //SmsManager manager = SmsManager.getDefault(); //as DSDS change
                 // Check for system property defining the emergency channel ranges to enable
                 String emergencyIdRange = isCdma ?
                         "" : SystemProperties.get(EMERGENCY_BROADCAST_RANGE_GSM);
@@ -262,8 +277,11 @@ public class CellBroadcastConfigService extends IntentService {
                         manager.disableCellBroadcast(cmasAmber);
                         manager.disableCellBroadcastRange(cmasTestStart, cmasTestEnd);
 
-                        // CMAS Presidential must be on (See 3GPP TS 22.268 Section 6.2).
-                        manager.enableCellBroadcast(cmasPresident);
+                        /*
+                         * As per 3GPP Ts 22.268 section 6.2, CMAS Presidential must be on only if
+                         * cell broadcast service is enabled on the UE.
+                         */
+                        manager.disableCellBroadcast(cmasPresident);
                     }
                     if (DBG) log("disabled emergency cell broadcast channels");
                 }
@@ -273,6 +291,7 @@ public class CellBroadcastConfigService extends IntentService {
                 } else if (enableChannel50Alerts) {
                     if (DBG) log("enabling cell broadcast channel 50");
                     manager.enableCellBroadcast(50);
+                    if (DBG) log("enabled cell broadcast channel 50");
                 } else {
                     if (DBG) log("disabling cell broadcast channel 50");
                     manager.disableCellBroadcast(50);
@@ -310,11 +329,15 @@ public class CellBroadcastConfigService extends IntentService {
                     if (DBG) Log.d(TAG, "disabling cell broadcast CMAS test messages");
                     manager.disableCellBroadcastRange(cmasTestStart, cmasTestEnd);
                 }
-            } catch (Exception ex) {
-                Log.e(TAG, "exception enabling cell broadcast channels", ex);
-            }
+
+                if ("true".equals(SystemProperties.get("persist.conformance"))) {
+                    // add Channels 0 and 1 for the 3GPP conformance 34.3 Test Case
+                    manager.enableCellBroadcastRange(0, 1);
+                    // add Channel 0x03E7=999 support CBDD,
+                    // to pass 3GPP 51010-4 the section 27.22.5.2.1 Seq 1.3.
+                    manager.enableCellBroadcast(999);
+                }
         }
-    }
 
     private static void log(String msg) {
         Log.d(TAG, msg);

@@ -80,7 +80,8 @@ public class CellBroadcastDatabaseHelper extends SQLiteOpenHelper {
                 + Telephony.CellBroadcasts.CMAS_RESPONSE_TYPE + " INTEGER,"
                 + Telephony.CellBroadcasts.CMAS_SEVERITY + " INTEGER,"
                 + Telephony.CellBroadcasts.CMAS_URGENCY + " INTEGER,"
-                + Telephony.CellBroadcasts.CMAS_CERTAINTY + " INTEGER);");
+                + Telephony.CellBroadcasts.CMAS_CERTAINTY + " INTEGER,"
+                + Telephony.CellBroadcasts.SIM_ID + " INTEGER);");
 
         createDeliveryTimeIndex(db);
     }

@@ -54,8 +54,22 @@
         android:singleLine="true"
         android:layout_marginBottom="6dip"
         android:layout_marginLeft="7dip"
+        android:layout_marginRight="4dip"
+        android:layout_alignParentLeft="true"
         android:layout_alignParentBottom="true"
+        android:layout_toLeftOf="@+id/sim_id"
         android:layout_alignWithParentIfMissing="true"
+        android:ellipsize="end" />
+
+    <TextView android:id="@id/sim_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmallInverse"
+        android:singleLine="true"
+        android:layout_marginBottom="10dip"
+        android:layout_marginRight="7dip"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
         android:ellipsize="end" />
 
 </com.android.cellbroadcastreceiver.CellBroadcastListItem>

@@ -25,8 +25,11 @@ import android.text.SpannableStringBuilder;
 import android.text.style.StyleSpan;
 import android.util.AttributeSet;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import com.android.internal.telephony.TelephonyConstants;
 
 /**
  * This class manages the list item view for a single alert.
@@ -38,6 +41,7 @@ public class CellBroadcastListItem extends RelativeLayout {
     private TextView mChannelView;
     private TextView mMessageView;
     private TextView mDateView;
+    private TextView mSimIdView;
 
     public CellBroadcastListItem(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -54,6 +58,7 @@ public class CellBroadcastListItem extends RelativeLayout {
         mChannelView = (TextView) findViewById(R.id.channel);
         mDateView = (TextView) findViewById(R.id.date);
         mMessageView = (TextView) findViewById(R.id.message);
+        mSimIdView = (TextView) findViewById(R.id.sim_id); /* DSDS specific */
     }
 
     /**
@@ -72,6 +77,21 @@ public class CellBroadcastListItem extends RelativeLayout {
         mChannelView.setText(CellBroadcastResources.getDialogTitleResource(message));
         mDateView.setText(message.getDateString(getContext()));
         mMessageView.setText(formatMessage(message));
+
+        // DSDS specific case
+        if (TelephonyConstants.IS_DSDS) {
+            int simId = message.getSimId();
+            //Valid data is only for '1' & '2'
+            if (simId == 1 || simId == 2) {
+                mSimIdView.setText("SIM " + simId);
+                mSimIdView.setVisibility(View.VISIBLE);
+            } else {
+                mSimIdView.setVisibility(View.GONE);
+            }
+        }
+        else {
+            mSimIdView.setVisibility(View.GONE);
+        }
     }
 
     private static CharSequence formatMessage(CellBroadcastMessage message) {
