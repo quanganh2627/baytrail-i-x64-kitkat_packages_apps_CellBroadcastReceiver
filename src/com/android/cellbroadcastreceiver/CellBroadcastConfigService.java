@@ -88,14 +88,6 @@ public class CellBroadcastConfigService extends IntentService {
         } catch (NumberFormatException e) {
             Log.e(TAG, "Number Format Exception parsing emergency channel range", e);
         }
-
-        // Make sure CMAS Presidential is enabled (See 3GPP TS 22.268 Section 6.2).
-        if (DBG) log("setChannelRange: enabling CMAS Presidential");
-        if (CellBroadcastReceiver.phoneIsCdma()) {
-            manager.enableCellBroadcast(SmsEnvelope.SERVICE_CATEGORY_CMAS_PRESIDENTIAL_LEVEL_ALERT);
-        } else {
-            manager.enableCellBroadcast(SmsCbConstants.MESSAGE_ID_CMAS_ALERT_PRESIDENTIAL_LEVEL);
-        }
     }
 
     /**
@@ -217,10 +209,10 @@ public class CellBroadcastConfigService extends IntentService {
                     cmasPresident = SmsEnvelope.SERVICE_CATEGORY_CMAS_PRESIDENTIAL_LEVEL_ALERT;
                 }
 
-                //SmsManager manager = SmsManager.getDefault(); //as DSDS change
                 // Check for system property defining the emergency channel ranges to enable
                 String emergencyIdRange = isCdma ?
                         "" : SystemProperties.get(EMERGENCY_BROADCAST_RANGE_GSM);
+
                 if (enableEmergencyAlerts) {
                     if (DBG) log("enabling emergency cell broadcast channels");
                     if (!TextUtils.isEmpty(emergencyIdRange)) {
@@ -291,7 +283,6 @@ public class CellBroadcastConfigService extends IntentService {
                 } else if (enableChannel50Alerts) {
                     if (DBG) log("enabling cell broadcast channel 50");
                     manager.enableCellBroadcast(50);
-                    if (DBG) log("enabled cell broadcast channel 50");
                 } else {
                     if (DBG) log("disabling cell broadcast channel 50");
                     manager.disableCellBroadcast(50);

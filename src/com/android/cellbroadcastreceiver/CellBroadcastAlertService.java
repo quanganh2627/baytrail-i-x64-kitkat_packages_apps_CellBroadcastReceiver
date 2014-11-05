@@ -59,22 +59,37 @@ public class CellBroadcastAlertService extends Service {
     static final String CB_AREA_INFO_RECEIVED_ACTION =
             "android.cellbroadcastreceiver.CB_AREA_INFO_RECEIVED";
 
+    /** Defines a generic Cell Broadcast Message */
+    static final String CB_MSG = "CellBroadcast";
+
+    /** Defines a ETWS Primary Notification Cell Broadcast Message */
+    static final String ETWS_MSG_PRIMARY = "EtwsPrimary";
+
+    /** Defines a ETWS Secondary Notification Cell Broadcast Message */
+    static final String ETWS_MSG_SECONDARY = "EtwsSecondary";
+
+    /** Defines a ETWS Primary identifier in SmsCbMessage */
+    static final String ETWS_IS_PRIMARY = "ETWS";
+
     /** Container for message ID and geographical scope, for duplicate message detection. */
     private static final class MessageServiceCategoryAndScope {
         private final int mServiceCategory;
         private final int mSerialNumber;
         private final SmsCbLocation mLocation;
+        private final String mAlertMessageType;
 
         MessageServiceCategoryAndScope(int serviceCategory, int serialNumber,
-                SmsCbLocation location) {
+                SmsCbLocation location, String alertMessageType) {
             mServiceCategory = serviceCategory;
             mSerialNumber = serialNumber;
             mLocation = location;
+            mAlertMessageType = alertMessageType;
         }
 
         @Override
         public int hashCode() {
-            return mLocation.hashCode() + 5 * mServiceCategory + 7 * mSerialNumber;
+            return mLocation.hashCode() + 5 * mServiceCategory + 7 * mSerialNumber +
+                    11 * mAlertMessageType.hashCode();
         }
 
         @Override
@@ -86,7 +101,8 @@ public class CellBroadcastAlertService extends Service {
                 MessageServiceCategoryAndScope other = (MessageServiceCategoryAndScope) o;
                 return (mServiceCategory == other.mServiceCategory &&
                         mSerialNumber == other.mSerialNumber &&
-                        mLocation.equals(other.mLocation));
+                        mLocation.equals(other.mLocation) &&
+                        mAlertMessageType == other.mAlertMessageType);
             }
             return false;
         }
@@ -94,7 +110,8 @@ public class CellBroadcastAlertService extends Service {
         @Override
         public String toString() {
             return "{mServiceCategory: " + mServiceCategory + " serial number: " + mSerialNumber +
-                    " location: " + mLocation.toString() + '}';
+                    " location: " + mLocation.toString() +
+                    " alert message type: " + mAlertMessageType + '}';
         }
     }
 
@@ -119,6 +136,7 @@ public class CellBroadcastAlertService extends Service {
                 Telephony.Sms.Intents.SMS_CB_RECEIVED_ACTION.equals(action)) {
             handleCellBroadcastIntent(intent);
         } else if (SHOW_NEW_ALERT_ACTION.equals(action)) {
+            Log.d(TAG, "SHOW_NEW_ALERT_ACTION, calling showNewAlert with " + action);
             showNewAlert(intent);
         } else {
             Log.e(TAG, "Unrecognized intent action: " + action);
@@ -134,6 +152,9 @@ public class CellBroadcastAlertService extends Service {
         }
 
         SmsCbMessage message = (SmsCbMessage) extras.get("message");
+        String messageType = CB_MSG;
+
+        Log.d(TAG, "SmsCbMessage:" + message.toString());
 
         if (message == null) {
             Log.e(TAG, "received SMS_CB_RECEIVED_ACTION with no message extra");
@@ -157,8 +178,21 @@ public class CellBroadcastAlertService extends Service {
         // Check for duplicate message IDs according to CMAS carrier requirements. Message IDs
         // are stored in volatile memory. If the maximum of 65535 messages is reached, the
         // message ID of the oldest message is deleted from the list.
+        if (message.isEtwsMessage()) {
+            String messageBody = message.getMessageBody();
+
+            if (messageBody.equals(ETWS_IS_PRIMARY)) {
+                messageType = ETWS_MSG_PRIMARY;
+                Log.d(TAG, "CellBroadcast Msg: message type: PRIMARY notification!");
+            } else {
+                messageType = ETWS_MSG_SECONDARY;
+                Log.d(TAG, "CellBroadcast Msg: message type: SECONDARY notification!");
+            }
+        }
+
         MessageServiceCategoryAndScope newCmasId = new MessageServiceCategoryAndScope(
-                message.getServiceCategory(), message.getSerialNumber(), message.getLocation());
+                message.getServiceCategory(), message.getSerialNumber(),
+                message.getLocation(), messageType);
 
         // Add the new message ID to the list. It's okay if this is a duplicate message ID,
         // because the list is only used for removing old message IDs from the hash set.
@@ -175,6 +209,7 @@ public class CellBroadcastAlertService extends Service {
                 sCmasIdListIndex = 0;
             }
         }
+
         // Set.add() returns false if message ID has already been added
         if (!sCmasIdSet.add(newCmasId)) {
             Log.d(TAG, "ignoring duplicate alert with " + newCmasId);
@@ -216,8 +251,21 @@ public class CellBroadcastAlertService extends Service {
         }
 
         if (CellBroadcastConfigService.isEmergencyAlertMessage(cbm)) {
-            // start alert sound / vibration / TTS and display full-screen alert
-            openEmergencyAlertNotification(cbm);
+            if (cbm.isEtwsMessage()) {
+                Log.d(TAG, "ETWS:" + cbm.getEtwsWarningInfo().toString());
+                if (cbm.isEtwsEmergencyUserAlert() || cbm.isEtwsPopupAlert()) {
+                    // start alert sound / vibration / TTS and display full-screen alert
+                    openEtwsEmergencyAlertNotification(cbm);
+                }
+                if (!cbm.isEtwsPopupAlert()) {
+                    // popup alert is disabled then just display
+                    // a notification into the device info bar.
+                    addToNotificationBar(cbm);
+                }
+            } else {
+                // start alert sound / vibration / TTS and display full-screen alert
+                openEmergencyAlertNotification(cbm);
+            }
         } else {
             // add notification to the bar
             addToNotificationBar(cbm);
@@ -281,7 +329,70 @@ public class CellBroadcastAlertService extends Service {
     }
 
     /**
-     * Display a full-screen alert message for emergency alerts.
+     * Display a full-screen alert message for etws notifications.
+     * @param message the alert to display
+     */
+    private void openEtwsEmergencyAlertNotification(CellBroadcastMessage message) {
+        // Acquire a CPU wake lock until the alert dialog and audio start playing.
+        CellBroadcastAlertWakeLock.acquireScreenCpuWakeLock(this);
+
+        if (message.isEtwsPopupAlert()) {
+            // Close dialogs and window shade
+            Intent closeDialogs = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
+            sendBroadcast(closeDialogs);
+        }
+
+        if (message.isEtwsEmergencyUserAlert()) {
+            // start audio/vibration/speech service for emergency alerts
+            Intent audioIntent = new Intent(this, CellBroadcastAlertAudio.class);
+            audioIntent.setAction(CellBroadcastAlertAudio.ACTION_START_ALERT_AUDIO);
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+            int duration;   // alert audio duration in ms
+            duration = Integer.parseInt(prefs.getString(
+                    CellBroadcastSettings.KEY_ALERT_SOUND_DURATION,
+                    CellBroadcastSettings.ALERT_SOUND_DEFAULT_DURATION)) * 1000;
+            audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_DURATION_EXTRA, duration);
+
+            // For ETWS, always vibrate, even in silent mode.
+            audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_VIBRATE_EXTRA, true);
+            audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_ETWS_VIBRATE_EXTRA, true);
+
+            String messageBody = message.getMessageBody();
+
+            if (prefs.getBoolean(CellBroadcastSettings.KEY_ENABLE_ALERT_SPEECH, true)) {
+                audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_MESSAGE_BODY, messageBody);
+
+                String language = message.getLanguageCode();
+                if (!"ja".equals(language)) {
+                    Log.w(TAG, "bad language code for ETWS - using Japanese TTS");
+                    language = "ja";
+                }
+                audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_MESSAGE_LANGUAGE,
+                        language);
+            }
+            startService(audioIntent);
+        }
+
+        if (message.isEtwsPopupAlert()) {
+            // Decide which activity to start based on the state of the keyguard.
+            Class c = CellBroadcastAlertDialog.class;
+            KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+            if (km.inKeyguardRestrictedInputMode()) {
+                // Use the full screen activity for security.
+                c = CellBroadcastAlertFullScreen.class;
+            }
+
+            ArrayList<CellBroadcastMessage> messageList = new ArrayList<CellBroadcastMessage>(1);
+            messageList.add(message);
+            Intent alertDialogIntent = createDisplayMessageIntent(this, c, messageList);
+            alertDialogIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(alertDialogIntent);
+        }
+    }
+
+    /**
+     * Display a full-screen alert message for emergency alerts (not Etws).
      * @param message the alert to display
      */
     private void openEmergencyAlertNotification(CellBroadcastMessage message) {
@@ -308,15 +419,9 @@ public class CellBroadcastAlertService extends Service {
         }
         audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_DURATION_EXTRA, duration);
 
-        if (message.isEtwsMessage()) {
-            // For ETWS, always vibrate, even in silent mode.
-            audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_VIBRATE_EXTRA, true);
-            audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_ETWS_VIBRATE_EXTRA, true);
-        } else {
-            // For other alerts, vibration can be disabled in app settings.
-            audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_VIBRATE_EXTRA,
-                    prefs.getBoolean(CellBroadcastSettings.KEY_ENABLE_ALERT_VIBRATE, true));
-        }
+        // For other (than Etws) alerts, vibration can be disabled in app settings.
+        audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_VIBRATE_EXTRA,
+                prefs.getBoolean(CellBroadcastSettings.KEY_ENABLE_ALERT_VIBRATE, true));
 
         String messageBody = message.getMessageBody();
 
@@ -324,10 +429,7 @@ public class CellBroadcastAlertService extends Service {
             audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_MESSAGE_BODY, messageBody);
 
             String language = message.getLanguageCode();
-            if (message.isEtwsMessage() && !"ja".equals(language)) {
-                Log.w(TAG, "bad language code for ETWS - using Japanese TTS");
-                language = "ja";
-            } else if (message.isCmasMessage() && !"en".equals(language)) {
+            if (message.isCmasMessage() && !"en".equals(language)) {
                 Log.w(TAG, "bad language code for CMAS - using English TTS");
                 language = "en";
             }

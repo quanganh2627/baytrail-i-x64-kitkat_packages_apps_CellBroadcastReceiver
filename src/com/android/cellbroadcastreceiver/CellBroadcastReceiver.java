@@ -204,28 +204,6 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
         return isCdma;
     }
 
-    private static class ServiceStateListener extends PhoneStateListener {
-        private final Context mContext;
-        private int mServiceState = -1;
-
-        ServiceStateListener(Context context) {
-            mContext = context;
-        }
-
-        @Override
-        public void onServiceStateChanged(ServiceState ss) {
-            int newState = ss.getState();
-            if (newState != mServiceState) {
-                Log.d(TAG, "Service state changed! " + newState + " Full: " + ss);
-                mServiceState = newState;
-                if (newState == ServiceState.STATE_IN_SERVICE ||
-                        newState == ServiceState.STATE_EMERGENCY_ONLY) {
-                    startConfigService(mContext);
-                }
-            }
-        }
-    }
-
     private static void log(String msg) {
         Log.d(TAG, msg);
     }
