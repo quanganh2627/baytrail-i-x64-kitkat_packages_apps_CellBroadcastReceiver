@@ -61,6 +61,12 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
                     && IccCardConstants.INTENT_VALUE_ICC_LOADED.equals(stateExtra)) {
                 startConfigService(context);
             }
+        }   else if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
+            if (DBG) log("Registering for ServiceState updates");
+            TelephonyManager tm = (TelephonyManager) context.getSystemService(
+                    Context.TELEPHONY_SERVICE);
+            tm.listen(new ServiceStateListener(context.getApplicationContext()),
+                    PhoneStateListener.LISTEN_SERVICE_STATE);
         } else if (Intent.ACTION_AIRPLANE_MODE_CHANGED.equals(action)) {
             boolean airplaneModeOn = intent.getBooleanExtra("state", false);
             if (DBG) log("airplaneModeOn: " + airplaneModeOn);
@@ -204,6 +210,28 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
         return isCdma;
     }
 
+    private static class ServiceStateListener extends PhoneStateListener {
+        private final Context mContext;
+        private int mServiceState = -1;
+
+        ServiceStateListener(Context context) {
+            mContext = context;
+        }
+
+        @Override
+        public void onServiceStateChanged(ServiceState ss) {
+            int newState = ss.getState();
+            Log.d(TAG, "Service state changed! newState" + newState + " Full: " + ss);
+            if (newState != mServiceState) {
+                Log.d(TAG, "Service state changed! " + newState + " Full: " + ss);
+                mServiceState = newState;
+                if (newState == ServiceState.STATE_IN_SERVICE ||
+                        newState == ServiceState.STATE_EMERGENCY_ONLY) {
+                    startConfigService(mContext);
+                }
+            }
+        }
+    }
     private static void log(String msg) {
         Log.d(TAG, msg);
     }
