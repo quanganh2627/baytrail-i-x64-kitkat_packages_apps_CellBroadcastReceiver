@@ -48,7 +48,6 @@ import static com.android.cellbroadcastreceiver.CellBroadcastReceiver.DBG;
  */
 public class CellBroadcastConfigService extends IntentService {
     private static final String TAG = "CellBroadcastConfigService";
-
     static final String ACTION_ENABLE_CHANNELS = "ACTION_ENABLE_CHANNELS";
 
     static final String EMERGENCY_BROADCAST_RANGE_GSM =
