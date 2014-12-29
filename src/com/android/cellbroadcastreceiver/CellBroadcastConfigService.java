@@ -311,10 +311,14 @@ public class CellBroadcastConfigService extends IntentService {
                         manager.disableCellBroadcast(
                                 SmsEnvelope.SERVICE_CATEGORY_CMAS_TEST_MESSAGE ,
                                 SmsManager.CELL_BROADCAST_RAN_TYPE_CDMA);
-                        // CMAS Presidential must be on (See 3GPP TS 22.268 Section 6.2).
-                        manager.enableCellBroadcast(cmasPresident,
+                        /*
+                         * As per 3GPP Ts 22.268 section 6.2, CMAS Presidential must be on only if
+                         * cell broadcast service is enabled on the UE.
+                         */
+
+                        manager.disableCellBroadcast(cmasPresident,
                                 SmsManager.CELL_BROADCAST_RAN_TYPE_GSM);
-                        manager.enableCellBroadcast(
+                        manager.disableCellBroadcast(
                                 SmsEnvelope.SERVICE_CATEGORY_CMAS_PRESIDENTIAL_LEVEL_ALERT,
                                 SmsManager.CELL_BROADCAST_RAN_TYPE_CDMA);
                         // register Taiwan PWS 4383 also, by default
