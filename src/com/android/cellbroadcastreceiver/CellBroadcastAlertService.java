@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Intel Mobile Communications GmbH
  * Copyright (C) 2011 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,22 +60,37 @@ public class CellBroadcastAlertService extends Service {
     static final String CB_AREA_INFO_RECEIVED_ACTION =
             "android.cellbroadcastreceiver.CB_AREA_INFO_RECEIVED";
 
+    /** Defines a generic Cell Broadcast Message */
+    static final String CB_MSG = "CellBroadcast";
+
+    /** Defines a ETWS Primary Notification Cell Broadcast Message */
+    static final String ETWS_MSG_PRIMARY = "EtwsPrimary";
+
+    /** Defines a ETWS Secondary Notification Cell Broadcast Message */
+    static final String ETWS_MSG_SECONDARY = "EtwsSecondary";
+
+    /** Defines a ETWS Primary identifier in SmsCbMessage */
+    static final String ETWS_IS_PRIMARY = "ETWS";
+
     /** Container for message ID and geographical scope, for duplicate message detection. */
     private static final class MessageServiceCategoryAndScope {
         private final int mServiceCategory;
         private final int mSerialNumber;
         private final SmsCbLocation mLocation;
+        private final String mAlertMessageType;
 
         MessageServiceCategoryAndScope(int serviceCategory, int serialNumber,
-                SmsCbLocation location) {
+                SmsCbLocation location, String alertMessageType) {
             mServiceCategory = serviceCategory;
             mSerialNumber = serialNumber;
             mLocation = location;
+            mAlertMessageType = alertMessageType;
         }
 
         @Override
         public int hashCode() {
-            return mLocation.hashCode() + 5 * mServiceCategory + 7 * mSerialNumber;
+            return mLocation.hashCode() + 5 * mServiceCategory + 7 * mSerialNumber +
+                    11 * mAlertMessageType.hashCode();
         }
 
         @Override
@@ -86,7 +102,8 @@ public class CellBroadcastAlertService extends Service {
                 MessageServiceCategoryAndScope other = (MessageServiceCategoryAndScope) o;
                 return (mServiceCategory == other.mServiceCategory &&
                         mSerialNumber == other.mSerialNumber &&
-                        mLocation.equals(other.mLocation));
+                        mLocation.equals(other.mLocation) &&
+                        mAlertMessageType == other.mAlertMessageType);
             }
             return false;
         }
@@ -94,7 +111,8 @@ public class CellBroadcastAlertService extends Service {
         @Override
         public String toString() {
             return "{mServiceCategory: " + mServiceCategory + " serial number: " + mSerialNumber +
-                    " location: " + mLocation.toString() + '}';
+                    " location: " + mLocation.toString() +
+                    " alert message type: " + mAlertMessageType + '}';
         }
     }
 
@@ -143,6 +161,7 @@ public class CellBroadcastAlertService extends Service {
         }
 
         SmsCbMessage message = (SmsCbMessage) extras.get("message");
+        String messageType = CB_MSG;
 
         if (message == null) {
             Log.e(TAG, "received SMS_CB_RECEIVED_ACTION with no message extra");
@@ -159,8 +178,21 @@ public class CellBroadcastAlertService extends Service {
         // Check for duplicate message IDs according to CMAS carrier requirements. Message IDs
         // are stored in volatile memory. If the maximum of 65535 messages is reached, the
         // message ID of the oldest message is deleted from the list.
+        if (message.isEtwsMessage()) {
+            String messageBody = message.getMessageBody();
+
+            if (messageBody.equals(ETWS_IS_PRIMARY)) {
+                messageType = ETWS_MSG_PRIMARY;
+                Log.d(TAG, "CellBroadcast Msg: message type: PRIMARY notification!");
+            } else {
+                messageType = ETWS_MSG_SECONDARY;
+                Log.d(TAG, "CellBroadcast Msg: message type: SECONDARY notification!");
+            }
+        }
+
         MessageServiceCategoryAndScope newCmasId = new MessageServiceCategoryAndScope(
-                message.getServiceCategory(), message.getSerialNumber(), message.getLocation());
+                message.getServiceCategory(), message.getSerialNumber(), message.getLocation(),
+                messageType);
 
         // Add the new message ID to the list. It's okay if this is a duplicate message ID,
         // because the list is only used for removing old message IDs from the hash set.
