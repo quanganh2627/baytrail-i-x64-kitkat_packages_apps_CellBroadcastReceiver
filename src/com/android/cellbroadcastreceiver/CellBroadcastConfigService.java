@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Intel Mobile Communications GmbH
  * Copyright (C) 2011 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -259,6 +260,15 @@ public class CellBroadcastConfigService extends IntentService {
                         // register Taiwan PWS 4383 also, by default
                         manager.enableCellBroadcast(cmasTaiwanPWS,
                                 SmsManager.CELL_BROADCAST_RAN_TYPE_GSM);
+                        if ("true".equals(SystemProperties.get("persist.conformance"))) {
+                            // add Channels 0 and 1 for the 3GPP conformance 34.3 Test Case
+                            manager.enableCellBroadcastRange(0, 1,
+                                    SmsManager.CELL_BROADCAST_RAN_TYPE_GSM);
+                            // add Channel 0x03E7=999 support CBDD,
+                            // to pass 3GPP 51010-4 the section 27.22.5.2.1 Seq 1.3.
+                            manager.enableCellBroadcast(999,
+                                    SmsManager.CELL_BROADCAST_RAN_TYPE_GSM);
+                        }
                     }
                     if (DBG) log("enabled emergency cell broadcast channels");
                 } else {
