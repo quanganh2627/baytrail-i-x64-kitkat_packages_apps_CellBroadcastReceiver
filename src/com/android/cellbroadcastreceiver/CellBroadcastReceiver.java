@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Intel Mobile Communications GmbH
  * Copyright (C) 2011 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,12 +35,12 @@ import android.util.Log;
 
 import com.android.internal.telephony.ITelephony;
 import com.android.internal.telephony.cdma.sms.SmsEnvelope;
+import com.android.internal.telephony.IccCardConstants;
 import com.android.internal.telephony.TelephonyIntents;
 
 public class CellBroadcastReceiver extends BroadcastReceiver {
     private static final String TAG = "CellBroadcastReceiver";
     static final boolean DBG = true;    // STOPSHIP: change to false before ship
-    private int mServiceState = -1;
     private static final String GET_LATEST_CB_AREA_INFO_ACTION =
             "android.cellbroadcastreceiver.GET_LATEST_CB_AREA_INFO";
 
@@ -53,20 +54,12 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
 
         String action = intent.getAction();
 
-        if (TelephonyIntents.ACTION_SERVICE_STATE_CHANGED.equals(action)) {
-            if (DBG) log("Intent ACTION_SERVICE_STATE_CHANGED");
-            ServiceState serviceState = ServiceState.newFromBundle(intent.getExtras());
-            int newState = serviceState.getState();
-            if (newState != mServiceState) {
-                Log.d(TAG, "Service state changed! " + newState + " Full: " + serviceState +
-                        " Current state=" + mServiceState);
-                mServiceState = newState;
-                if (((newState == ServiceState.STATE_IN_SERVICE) ||
-                        (newState == ServiceState.STATE_EMERGENCY_ONLY)) &&
-                        (UserHandle.myUserId() == UserHandle.USER_OWNER)) {
+         if (TelephonyIntents.ACTION_SIM_STATE_CHANGED.equals(action) && privileged) {
+             String stateExtra = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
+             if (stateExtra != null
+                     && IccCardConstants.INTENT_VALUE_ICC_LOADED.equals(stateExtra)) {
                     startConfigService(context.getApplicationContext());
-                }
-            }
+             }
         } else if (Telephony.Sms.Intents.SMS_EMERGENCY_CB_RECEIVED_ACTION.equals(action) ||
                 Telephony.Sms.Intents.SMS_CB_RECEIVED_ACTION.equals(action)) {
             // If 'privileged' is false, it means that the intent was delivered to the base
