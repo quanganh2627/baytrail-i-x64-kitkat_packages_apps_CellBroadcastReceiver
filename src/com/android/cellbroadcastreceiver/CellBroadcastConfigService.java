@@ -322,7 +322,7 @@ public class CellBroadcastConfigService extends IntentService {
                                 SmsEnvelope.SERVICE_CATEGORY_CMAS_PRESIDENTIAL_LEVEL_ALERT,
                                 SmsManager.CELL_BROADCAST_RAN_TYPE_CDMA);
                         // register Taiwan PWS 4383 also, by default
-                        manager.enableCellBroadcast(cmasTaiwanPWS,
+                        manager.disableCellBroadcast(cmasTaiwanPWS,
                                 SmsManager.CELL_BROADCAST_RAN_TYPE_GSM);
                     }
                     if (DBG) log("disabled emergency cell broadcast channels");
