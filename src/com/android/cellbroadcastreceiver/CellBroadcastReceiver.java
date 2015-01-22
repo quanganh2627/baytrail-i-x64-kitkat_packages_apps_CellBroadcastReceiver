@@ -54,10 +54,11 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
 
         String action = intent.getAction();
 
-         if (TelephonyIntents.ACTION_SIM_STATE_CHANGED.equals(action) && privileged) {
+         if (TelephonyIntents.ACTION_SIM_STATE_CHANGED.equals(action)) {
              String stateExtra = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
              if (stateExtra != null
-                     && IccCardConstants.INTENT_VALUE_ICC_LOADED.equals(stateExtra)) {
+                     && IccCardConstants.INTENT_VALUE_ICC_LOADED.equals(stateExtra)
+                     && (UserHandle.myUserId() == UserHandle.USER_OWNER)) {
                     startConfigService(context.getApplicationContext());
              }
         } else if (Telephony.Sms.Intents.SMS_EMERGENCY_CB_RECEIVED_ACTION.equals(action) ||
