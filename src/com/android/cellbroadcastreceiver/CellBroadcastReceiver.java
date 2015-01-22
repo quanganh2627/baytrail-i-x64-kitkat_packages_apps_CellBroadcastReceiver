@@ -61,6 +61,15 @@ public class CellBroadcastReceiver extends BroadcastReceiver {
                      && (UserHandle.myUserId() == UserHandle.USER_OWNER)) {
                     startConfigService(context.getApplicationContext());
              }
+        } else if (Intent.ACTION_AIRPLANE_MODE_CHANGED.equals(action)) {
+            boolean airplaneModeOn = intent.getBooleanExtra("state", false);
+            if (DBG) log("airplaneModeOn: " + airplaneModeOn);
+            if (!airplaneModeOn && (UserHandle.myUserId() == UserHandle.USER_OWNER)) {
+               // When AIRPLANE_MODE ON->OFF then the AIRPLANE_MODE intent
+               // is sent to the CellBroadcastAlertService module.
+               intent.setClass(context, CellBroadcastAlertService.class);
+               context.startService(intent);
+            }
         } else if (Telephony.Sms.Intents.SMS_EMERGENCY_CB_RECEIVED_ACTION.equals(action) ||
                 Telephony.Sms.Intents.SMS_CB_RECEIVED_ACTION.equals(action)) {
             // If 'privileged' is false, it means that the intent was delivered to the base

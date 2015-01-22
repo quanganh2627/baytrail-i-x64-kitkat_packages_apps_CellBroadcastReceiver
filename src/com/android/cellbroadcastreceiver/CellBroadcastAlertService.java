@@ -147,6 +147,12 @@ public class CellBroadcastAlertService extends Service {
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
+        } else if (Intent.ACTION_AIRPLANE_MODE_CHANGED.equals(action)
+                && !intent.getBooleanExtra("state", false)) {
+            // Delete the history of SMS CB on airplane mode deactivation to
+            // avoid messages ignored as duplicate.
+            sCmasIdSet.clear();
+            sCmasIdList.clear();
         } else {
             Log.e(TAG, "Unrecognized intent action: " + action);
         }
