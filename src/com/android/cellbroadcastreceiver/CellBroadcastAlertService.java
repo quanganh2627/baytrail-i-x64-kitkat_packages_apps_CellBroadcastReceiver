@@ -325,12 +325,17 @@ public class CellBroadcastAlertService extends Service {
      * @param message the alert to display
      */
     private void openEmergencyAlertNotification(CellBroadcastMessage message) {
+        boolean needEtwsPopup = message.isEtwsMessage() && message.isEtwsPopupAlert();
+        boolean needEtwsUserAlert = message.isEtwsMessage() && message.isEtwsEmergencyUserAlert();
+        Log.d(TAG, "ETWS flags:  " + needEtwsPopup + "and:  " + needEtwsUserAlert);
+
         // Acquire a CPU wake lock until the alert dialog and audio start playing.
         CellBroadcastAlertWakeLock.acquireScreenCpuWakeLock(this);
-
         // Close dialogs and window shade
-        Intent closeDialogs = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
-        sendBroadcast(closeDialogs);
+        if (needEtwsPopup || !message.isEtwsMessage()) {
+            Intent closeDialogs = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
+            sendBroadcast(closeDialogs);
+        }
 
         // start audio/vibration/speech service for emergency alerts
         Intent audioIntent = new Intent(this, CellBroadcastAlertAudio.class);
@@ -341,14 +346,15 @@ public class CellBroadcastAlertService extends Service {
         if (message.isCmasMessage()) {
             // CMAS requirement: duration of the audio attention signal is 10.5 seconds.
             duration = 10500;
-        } else {
+            audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_DURATION_EXTRA, duration);
+        } else if (needEtwsUserAlert) {
             duration = Integer.parseInt(prefs.getString(
                     CellBroadcastSettings.KEY_ALERT_SOUND_DURATION,
                     CellBroadcastSettings.ALERT_SOUND_DEFAULT_DURATION)) * 1000;
+            audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_DURATION_EXTRA, duration);
         }
-        audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_DURATION_EXTRA, duration);
 
-        if (message.isEtwsMessage()) {
+        if (needEtwsUserAlert) {
             // For ETWS, always vibrate, even in silent mode.
             audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_VIBRATE_EXTRA, true);
             audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_ETWS_VIBRATE_EXTRA, true);
@@ -374,7 +380,9 @@ public class CellBroadcastAlertService extends Service {
             audioIntent.putExtra(CellBroadcastAlertAudio.ALERT_AUDIO_MESSAGE_LANGUAGE,
                     language);
         }
-        startService(audioIntent);
+        if (needEtwsUserAlert || !message.isEtwsMessage()) {
+            startService(audioIntent);
+        }
 
         // Decide which activity to start based on the state of the keyguard.
         Class c = CellBroadcastAlertDialog.class;
@@ -389,7 +397,18 @@ public class CellBroadcastAlertService extends Service {
 
         Intent alertDialogIntent = createDisplayMessageIntent(this, c, messageList);
         alertDialogIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(alertDialogIntent);
+
+        if (needEtwsPopup || !message.isEtwsMessage()) {
+            startActivity(alertDialogIntent);
+        }
+        // popup alert is disabled then just display
+        // a notification into the device info bar.
+
+        if ((message.isEtwsMessage()
+                && !message.isEtwsPopupAlert())
+                || message.isCmasMessage()) {
+            addToNotificationBar(message);
+        }
     }
 
     /**
